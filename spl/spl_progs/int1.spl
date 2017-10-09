@@ -1,0 +1,76 @@
+alias physicalSP S0;
+physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+
+alias sysCallNo S1;
+ sysCallNo = [physicalSP-1];
+					// Point No 1 Code
+alias filename S2;
+ filename = [physicalSP-3];
+
+if(sysCallNo == 1) then
+  alias FATindex S3;
+    FATindex=0;
+
+	while(FATindex < 64) do
+	   if([FAT + 8 * FATindex] == filename) then
+	       [physicalSP-2]=0;				// Point No 2 Code
+		ireturn;
+	   endif;
+	 FATindex=FATindex+1;
+	endwhile;
+
+	alias DFLindex S4;
+	 DFLindex=24;
+
+	 while(DFLindex < 448) do
+	   if( [DISK_LIST + DFLindex] == 0 ) then
+		break;					// Point No 3 Code
+	   endif;
+	     DFLindex = DFLindex + 1;
+	  endwhile;
+	 
+
+	 if( DFLindex == 448) then
+	   [physicalSP-2] = -1;    		      // Point No 4 Code
+	 ireturn;
+	 endif;
+	 
+	FATindex=0;				// Point No 5 If free block is found then further execute
+
+	while(FATindex < 64) do
+	 if([FAT + FATindex] == -1) then
+	      break;				// Point No 6 Code
+	endif;
+	  FATindex = FATindex+1;
+	endwhile;
+
+	 if(FATindex == 64) then
+	   [physicalSP - 2] = -1;	// Point No 6 Code
+	 endif;
+
+	[FAT + 8*FATindex] = filename;
+	[FAT + 8*FATindex + 1] = 0;		// Point No 7 Code
+	[FAT + 8*FATindex + 2] = DFLindex;
+	
+	load(1,DFLindex); 				// Point No 8 Code
+	
+	alias counter S5;
+	 counter = 0;
+	while( counter < 256 ) do
+	  [SCRATCHPAD + counter] = -1;		// Point No 9 Code
+	counter = counter + 1;
+	endwhile;
+	store(1,DFLindex);
+	
+	[DFLindex + DISK_LIST] = 1;	// Point No 10 Code
+	
+	store(5,19);			// Point No 11 Code
+	store(6,20);			
+	
+	[physicalSP-2] = 0;		// Point N0 12 Code
+endif;
+
+ireturn;
+
+	 
+	
